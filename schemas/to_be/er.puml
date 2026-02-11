@@ -1,0 +1,154 @@
+@startuml
+skinparam linetype ortho
+
+class User <<User>> {
+    primary_key(id): UUID
+    email: VARCHAR
+    password_hash: VARCHAR
+    name: VARCHAR
+    created_at: TIMESTAMP
+}
+
+class Role <<User>> {
+    primary_key(id): UUID
+    name: VARCHAR
+    description: TEXT
+}
+
+class UserDeviceAccess <<User>> {
+    primary_key(id): UUID
+    user_id: UUID
+    device_id: UUID
+    role_id: UUID
+    granted_at: TIMESTAMP
+}
+
+class Device <<Device>> {
+    primary_key(id): UUID
+    owner_id: UUID
+    type: VARCHAR
+    manufacturer: VARCHAR
+    model: VARCHAR
+    name: VARCHAR
+    status: VARCHAR
+    registered_at: TIMESTAMP
+    location_id: UUID
+}
+
+class DeviceCapability <<Device>> {
+    primary_key(id): UUID
+    device_id: UUID
+    command_type: VARCHAR
+    parameter_spec: JSONB
+}
+
+class Location <<Device>> {
+    primary_key(id): UUID
+    owner_id: UUID
+    name: VARCHAR
+    type: VARCHAR
+}
+
+
+class Command <<Command>> {
+    primary_key(id): UUID
+    device_id: UUID
+    user_id: UUID
+    type: VARCHAR
+    parameters: JSONB
+    status: VARCHAR
+    created_at: TIMESTAMP
+    retry_count: INT
+}
+
+class CommandResult <<Command>> {
+    primary_key(id): UUID
+    command_id: UUID
+    status: VARCHAR
+    response: JSONB
+    error_message: TEXT
+    executed_at: TIMESTAMP
+    execution_time_ms: INT
+}
+
+class TelemetryReading <<Telemetry>> {
+    primary_key(id): UUID
+    device_id: UUID
+    metric_name: VARCHAR
+    value: FLOAT
+    unit: VARCHAR
+    timestamp: TIMESTAMP
+}
+
+class TelemetryAggregate <<Telemetry>> {
+    primary_key(id): UUID
+    device_id: UUID
+    metric_name: VARCHAR
+    avg_value: FLOAT
+    min_value: FLOAT
+    max_value: FLOAT
+    period_start: TIMESTAMP
+    period_end: TIMESTAMP
+}
+
+class Scenario <<Scenarios>> {
+    primary_key(id): UUID
+    owner_id: UUID
+    name: VARCHAR
+    description: TEXT
+    enabled: BOOLEAN
+    created_at: TIMESTAMP
+}
+
+class Trigger <<Scenarios>> {
+    primary_key(id): UUID
+    scenario_id: UUID
+    type: VARCHAR
+    config: JSONB
+}
+
+class Condition <<Scenarios>> {
+    primary_key(id): UUID
+    scenario_id: UUID
+    expression: TEXT
+    device_id: UUID
+}
+
+class Action <<Scenarios>> {
+    primary_key(id): UUID
+    scenario_id: UUID
+    type: VARCHAR
+    target_device_id: UUID
+    parameters: JSONB
+    order: INT
+}
+
+User ||--o{ UserDeviceAccess : "has access to"
+User ||--o{ Device : "owns"
+User ||--o{ Command : "creates"
+User ||--o{ Scenario : "owns"
+User ||--o{ Location : "has"
+
+Role ||--o{ UserDeviceAccess : "defines"
+
+Device ||--o{ DeviceCapability : "has"
+Device ||--o{ Command : "receives"
+Device ||--o{ TelemetryReading : "sends"
+Device ||--o{ Condition : "monitored by"
+Device ||--o{ Action : "controlled by"
+Device }o--|| Location : "located in"
+Device ||--o{ UserDeviceAccess : "accessible by"
+
+Location ||--o{ DeviceLocation : "contains"
+
+
+Command ||--|| CommandResult : "has result"
+
+
+TelemetryReading ||--o{ TelemetryAggregate : "aggregated into"
+
+Scenario ||--o{ Trigger : "triggered by"
+Scenario ||--o{ Condition : "checks"
+Scenario ||--o{ Action : "executes"
+
+@enduml

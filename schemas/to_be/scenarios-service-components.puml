@@ -1,0 +1,48 @@
+@startuml
+!includeurl ../C4-lib/c4_Component.puml
+
+Container_Ext(apiGateway, "API Gateway")
+Container_Ext(deviceControl, "Device Control Service", "Go", "")
+Container_Ext(telemetryService, "Telemetry Service", "Go", "")
+Container_Ext(messageBus, "Message Bus", "Kafka", "")
+ContainerDb_Ext(automationDb, "Automation DB", "PostgreSQL", "")
+
+Container_Boundary(automation, "Scenarios Service") {
+    
+    Component(restApi, "REST API Controller", "Go/Gin", "Endpoints:\n• POST /scenarios\n• GET /scenarios\n• PUT /scenarios/{id}\n• POST /scenarios/{id}/execute")
+    
+    Component(scenarioManager, "Scenario Manager", "Go", "Управление сценариями:\n• Создание/обновление\n• Валидация правил\n• Активация/деактивация")
+    
+    Component(ruleEngine, "Rule Engine", "Go", "Обработка правил:\n• Evaluation триггеров\n• Проверка условий\n• Определение действий")
+    
+    Component(triggerProcessor, "Trigger Processor", "Go", "Обработка триггеров:\n• Time-based (cron)\n• Sensor-based\n• Manual\n• Event-based")
+    
+    Component(conditionEvaluator, "Condition Evaluator", "Go", "Проверка условий:\n• if temperature < 18\n• if motion detected\n• if time between 22:00-06:00\n• Logical operators (AND/OR)")
+    
+    Component(actionExecutor, "Action Executor", "Go", "Выполнение действий:\n• Отправка команд на устройства\n• Отправка уведомлений\n• Вызов других сценариев")
+    
+    Component(schedulerService, "Scheduler Service", "Go", "Планировщик:\n• Cron jobs\n• Периодические проверки\n• Time-based triggers")
+    
+    Component(eventSubscriber, "Event Subscriber", "Go", "Подписка на события:\n• TelemetryReceived\n• MotionDetected\n• CommandExecuted")
+    
+    Component(repository, "Repository", "Go", "Data Access Layer:\n• Scenarios CRUD\n• Triggers, Conditions, Actions\n• Execution history")
+}
+
+Rel(apiGateway, restApi, "HTTP запросы", "REST/JSON")
+Rel(restApi, scenarioManager, "Управление сценариями")
+Rel(scenarioManager, repository, "Сохранить сценарий")
+
+Rel(schedulerService, triggerProcessor, "Time trigger")
+Rel(eventSubscriber, triggerProcessor, "Event trigger")
+Rel(messageBus, eventSubscriber, "События")
+
+Rel(triggerProcessor, ruleEngine, "Триггер сработал")
+Rel(ruleEngine, conditionEvaluator, "Проверить условия")
+Rel(conditionEvaluator, telemetryService, "Получить текущие значения", "REST")
+Rel(ruleEngine, actionExecutor, "Если условия выполнены")
+
+Rel(actionExecutor, deviceControl, "Отправить команду", "REST")
+Rel(actionExecutor, repository, "Записать выполнение")
+
+Rel(repository, automationDb, "SQL запросы")
+@enduml

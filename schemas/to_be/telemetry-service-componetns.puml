@@ -1,0 +1,58 @@
+@startuml
+!includeurl ../C4-lib/c4_Component.puml
+
+
+title Component Diagram - Telemetry Service
+
+Container_Ext(apiGateway, "API Gateway")
+Container_Ext(protocolGateway, "Protocol Gateway", "MQTT", "")
+Container_Ext(messageBus, "Message Bus", "Kafka", "")
+Container_Ext(cache, "Cache", "Redis", "")
+ContainerDb_Ext(telemetryDb, "Telemetry DB", "TimescaleDB", "")
+
+Container_Boundary(telemetry, "Telemetry Service") {
+    
+    Component(restApi, "REST API Controller", "Go/Chi", "Endpoints:\n• GET /devices/{id}/telemetry\n• GET /devices/{id}/telemetry/current\n• GET /devices/{id}/analytics")
+    
+    Component(mqttSubscriber, "MQTT Subscriber", "Go", "Подписка на топики:\n• devices/+/telemetry\n• Получение данных от датчиков\n• High-throughput обработка")
+    
+    Component(dataIngestion, "Data Ingestion", "Go", "Приём телеметрии:\n• Валидация формата\n• Нормализация данных\n• Buffering")
+    
+    Component(dataValidator, "Data Validator", "Go", "Валидация:\n• Проверка диапазонов\n• Обнаружение аномалий\n• Отбрасывание некорректных данных")
+    
+    Component(batchWriter, "Batch Writer", "Go", "Пакетная запись:\n• Накопление данных\n• Bulk insert\n• Оптимизация производительности")
+    
+    Component(aggregationEngine, "Aggregation Engine", "Go", "Агрегация:\n• Почасовые средние\n• Дневные минимум/максимум\n• Тренды")
+    
+    Component(queryService, "Query Service", "Go", "Выборка данных:\n• Time-range запросы\n• Фильтрация по метрикам\n• Downsampling")
+    
+    Component(eventPublisher, "Event Publisher", "Go", "Публикация событий:\n• TelemetryReceived\n• ThresholdExceeded\n• AnomalyDetected")
+    
+    Component(cacheManager, "Cache Manager", "Go", "Кэширование:\n• Last readings\n• Текущие значения\n• Часто запрашиваемые агрегаты")
+    
+    Component(repository, "Repository", "Go", "Data Access Layer:\n• Time-series queries\n• Hypertable operations")
+}
+
+Rel(protocolGateway, mqttSubscriber, "Телеметрия от устройств", "MQTT")
+Rel(mqttSubscriber, dataIngestion, "Передать данные")
+Rel(dataIngestion, dataValidator, "Валидировать")
+Rel(dataValidator, batchWriter, "Добавить в batch")
+Rel(batchWriter, repository, "Bulk insert")
+Rel(dataIngestion, eventPublisher, "TelemetryReceived")
+
+Rel(apiGateway, restApi, "HTTP запросы", "REST/JSON")
+Rel(restApi, cacheManager, "Проверить кэш")
+Rel(cacheManager, cache, "Get/Set", "Redis")
+Rel(restApi, queryService, "Запрос данных")
+Rel(queryService, repository, "Time-series query")
+
+Rel(aggregationEngine, repository, "Читает raw data")
+Rel(aggregationEngine, repository, "Пишет агрегаты")
+
+Rel(dataValidator, eventPublisher, "ThresholdExceeded/Anomaly")
+
+Rel(repository, telemetryDb, "SQL запросы")
+
+Rel(eventPublisher, messageBus, "Публикует события", "AMQP")
+
+@enduml

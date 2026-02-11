@@ -1,0 +1,60 @@
+@startuml
+!includeurl ../C4-lib/c4_Component.puml
+
+title Component Diagram - Device Control Service
+
+Container_Ext(apiGateway, "API Gateway", "nginx", "")
+Container_Ext(deviceRegistry, "Device Registry Service", "Go", "")
+Container_Ext(protocolGateway, "Protocol Gateway", "MQTT", "")
+Container_Ext(messageBus, "Message Bus", "Kafka", "")
+ContainerDb_Ext(controlDb, "Control DB", "PostgreSQL", "")
+
+Container_Boundary(deviceControl, "Device Control Service") {
+    
+    Component(restApi, "REST API Controller", "Go/Gin", "Endpoints:\n• POST /devices/{id}/commands\n• GET /commands/{id}\n• GET /commands/{id}/status")
+    
+    Component(commandHandler, "Command Handler", "Go", "Валидация команд:\n• Проверка параметров\n• Проверка прав доступа\n• Создание команды")
+    
+    Component(commandValidator, "Command Validator", "Go", "Проверяет:\n• Поддерживает ли устройство команду\n• Корректность параметров\n• Валидные значения")
+    
+    Component(queueManager, "Queue Manager", "Go", "Управление очередью:\n• Добавление в очередь\n• Приоритизация\n• Обработка в порядке FIFO")
+    
+    Component(commandExecutor, "Command Executor", "Go", "Выполнение команд:\n• Отправка через MQTT\n• Мониторинг выполнения\n• Timeout handling")
+    
+    Component(resultProcessor, "Result Processor", "Go", "Обработка результатов:\n• Парсинг ответов от устройств\n• Сохранение результатов\n• Обработка ошибок")
+    
+    Component(retryManager, "Retry Manager", "Go", "Логика повторов:\n• Exponential backoff\n• Max retry attempts\n• Dead letter queue")
+    
+    Component(eventPublisher, "Event Publisher", "Go", "Публикация событий:\n• CommandExecuted\n• CommandFailed\n• CommandTimeout")
+    
+    Component(repository, "Repository", "Go", "Data Access Layer:\n• Сохранение команд\n• Сохранение результатов\n• История команд")
+}
+
+
+Rel(apiGateway, restApi, "HTTP запросы", "REST/JSON")
+Rel(restApi, deviceRegistry, "Проверка устройства", "REST")
+
+
+Rel(restApi, commandHandler, "Создать команду")
+Rel(commandHandler, commandValidator, "Валидировать")
+Rel(commandValidator, deviceRegistry, "Получить capabilities", "REST")
+Rel(commandHandler, repository, "Сохранить команду")
+Rel(commandHandler, queueManager, "Добавить в очередь")
+
+Rel(queueManager, commandExecutor, "Передать для выполнения")
+Rel(commandExecutor, protocolGateway, "Отправить команду", "MQTT Publish")
+
+Rel(protocolGateway, resultProcessor, "Результат выполнения", "MQTT Subscribe")
+Rel(resultProcessor, repository, "Сохранить результат")
+Rel(resultProcessor, eventPublisher, "Создать событие")
+
+
+Rel(resultProcessor, retryManager, "При ошибке/timeout")
+Rel(retryManager, queueManager, "Повторная попытка")
+
+
+Rel(eventPublisher, messageBus, "Публикует события", "AMQP")
+
+
+Rel(repository, controlDb, "SQL запросы")
+@enduml

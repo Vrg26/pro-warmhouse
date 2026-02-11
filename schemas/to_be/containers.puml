@@ -1,0 +1,88 @@
+@startuml
+!includeurl ../C4-lib/c4_Container.puml
+
+Person(user, "Пользователь", "Владелец или член семьи")
+
+System_Boundary(clientApps, "Клиентсвие приложения") {
+    Container(webApp, "Web App", "React", "Веб-приложение")
+    Container(mobileApp, "Mobile App", "React Native", "Мобильное приложение")
+}
+
+System_Boundary(apiLayer, "API Layer") {
+    Container(apiGateway, "API Gateway", "Nginx", "Маршрутизация, аутентификация, rate limiting")
+}
+
+System_Boundary(coreServices, "Core Microservices") {
+    Container(userService, "User & Access Service", "Go", "Управление пользователями и доступом")
+    ContainerDb(userDb, "User DB", "PostgreSQL", "")
+
+    Container(deviceRegistry, "Device Registry Service", "Go", "Каталог и регистрация устройств")
+    ContainerDb(deviceDb, "Device DB", "PostgreSQL", "")
+
+    Container(deviceControl, "Device Control Service", "Go", "Отправка команд на устройства")
+    ContainerDb(controlDb, "Control DB", "PostgreSQL", "")
+
+    Container(telemetryService, "Telemetry Service", "Go", "Сбор и хранение телеметрии")
+    ContainerDb(telemetryDb, "Telemetry DB", "TimescaleDB", "Time-series данные")
+
+    Container(automationService, "Scenaries Service", "Go", "Сценарии и автоматизация")
+    ContainerDb(automationDb, "Automation DB", "PostgreSQL", "")
+
+    Container(notificationService, "Notification Service", "Go", "Отправка уведомлений")
+    ContainerDb(notificationDb, "Notification DB", "PostgreSQL", "")
+
+    Container(videoService, "Video Service", "Go/Node.js", "Видеонаблюдение и запись")
+    ContainerDb(videoStorage, "Video Storage", "S3/MinIO", "Хранилище видео")
+}
+
+System_Boundary(infrastructure, "Infrastructure Services") {
+    Container(protocolGateway, "Protocol Gateway", "MQTT Broker", "Коммуникация с IoT устройствами")
+    Container(messageBus, "Message Bus", "RabbitMQ", "Event-driven коммуникация")
+    Container(cache, "Cache", "Redis", "Кэширование")
+}
+
+System_Ext(externalServices, "External Services", "Email, SMS, Push-уведомления")
+System_Ext(iotDevices, "IoT Devices", "Датчики и исполнительные устройства:\nотопление, свет, камеры, ворота")
+
+Rel(user, webApp, "Использует", "HTTPS")
+Rel(user, mobileApp, "Использует", "HTTPS")
+
+Rel(webApp, apiGateway, "API запросы", "REST/JSON")
+Rel(mobileApp, apiGateway, "API запросы", "REST/JSON")
+
+Rel(apiGateway, userService, "Аутентификация", "REST")
+Rel(apiGateway, deviceRegistry, "Управление устройствами", "REST")
+Rel(apiGateway, deviceControl, "Команды", "REST")
+Rel(apiGateway, telemetryService, "Телеметрия", "REST")
+Rel(apiGateway, automationService, "Сценарии", "REST")
+Rel(apiGateway, videoService, "Видео", "REST/WebRTC")
+
+Rel(userService, userDb, "Читает/пишет", "SQL")
+Rel(deviceRegistry, deviceDb, "Читает/пишет", "SQL")
+Rel(deviceControl, controlDb, "Читает/пишет", "SQL")
+Rel(telemetryService, telemetryDb, "Пишет временные ряды", "SQL")
+Rel(automationService, automationDb, "Читает/пишет", "SQL")
+Rel(notificationService, notificationDb, "Читает/пишет", "SQL")
+Rel(videoService, videoStorage, "Сохраняет видео", "S3 API")
+
+Rel(deviceControl, deviceRegistry, "Проверка устройства", "REST")
+Rel(automationService, deviceControl, "Выполнение команд", "REST")
+Rel(automationService, telemetryService, "Чтение показаний", "REST")
+
+Rel(deviceControl, protocolGateway, "Отправка команд", "MQTT")
+Rel(telemetryService, protocolGateway, "Получение телеметрии", "MQTT")
+Rel(userService, cache, "Кэш токенов", "Redis")
+Rel(deviceRegistry, cache, "Кэш статусов", "Redis")
+
+Rel(deviceControl, messageBus, "Публикует события", "AMQP")
+Rel(telemetryService, messageBus, "Публикует события", "AMQP")
+Rel(videoService, messageBus, "Публикует события", "AMQP")
+Rel(automationService, messageBus, "Подписан на события", "AMQP")
+Rel(notificationService, messageBus, "Подписан на события", "AMQP")
+
+Rel(protocolGateway, iotDevices, "Команды и запросы", "MQTT/Zigbee/Z-Wave")
+Rel_Back(iotDevices, protocolGateway, "Телеметрия и статусы", "MQTT")
+
+Rel(notificationService, externalServices, "Отправка уведомлений", "API")
+
+@enduml

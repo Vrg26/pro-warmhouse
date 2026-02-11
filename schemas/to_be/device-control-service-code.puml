@@ -1,0 +1,240 @@
+@startuml
+!includeurl ../C4-lib/c4_Component.puml
+
+enum CommandStatus {
+  PENDING
+  VALIDATING
+  QUEUED
+  EXECUTING
+  SUCCESS
+  FAILED
+  TIMEOUT
+  REJECTED
+}
+
+enum CommandType {
+  SET_TEMPERATURE
+  TOGGLE_POWER
+  SET_BRIGHTNESS
+  OPEN_GATE
+  CLOSE_GATE
+}
+
+
+class Command {
+  - id: UUID
+  - deviceId: UUID
+  - type: CommandType
+  - parameters: map[string]interface{}
+  - status: CommandStatus
+  - createdAt: time.Time
+  - sentAt: time.Time
+  - executedAt: time.Time
+  - createdBy: UUID
+  - retryCount: int
+  --
+  + NewCommand(deviceId, type, params): Command
+  + UpdateStatus(status): void
+  + CanRetry(): bool
+  + IsExpired(): bool
+  + ToMQTTPayload(): []byte
+}
+
+class CommandResult {
+  - id: UUID
+  - commandId: UUID
+  - deviceId: UUID
+  - status: CommandStatus
+  - resonse: map[string]interface{}
+  - errorCode: string
+  - errorMessage: string
+  - executedAt: time.Time
+  - executionTimeMs: int
+  --
+  + NewCommandResult(cmd): CommandResult
+  + IsSuccess(): bool
+  + ShouldRetry(): bool
+}
+
+
+class DeviceCapability {
+  - deviceId: UUID
+  - supportedCommands: []CommandType
+  - parameters: map[string]ParameterSpec
+  --
+  + SupportsCommand(type): bool
+  + ValidateParameters(params): error
+}
+
+class ParameterSpec {
+  - name: string
+  - type: string
+  - required: bool
+  - minValue: float64
+  - maxValue: float64
+  - allowedValues: []string
+}
+
+
+class CommandHandler {
+  - validator: CommandValidator
+  - repository: CommandRepository
+  - queueManager: QueueManager
+  - deviceClient: DeviceRegistryClient
+  --
+  + HandleCommand(cmd): (Command, error)
+  + GetCommandStatus(id): (Command, error)
+  + GetCommandResult(id): (CommandResult, error)
+}
+
+class CommandValidator {
+  - deviceClient: DeviceRegistryClient
+  --
+  + Validate(cmd): error
+  + ValidatePermissions(userId, deviceId): error
+  + ValidateParameters(cmd): error
+}
+
+class CommandExecutor {
+  - mqttClient: MQTTClient
+  - resultProcessor: ResultProcessor
+  - timeout: time.Duration
+  --
+  + Execute(cmd): error
+  + SendToDevice(cmd): error
+  + WaitForResult(cmdId): (CommandResult, error)
+}
+
+class QueueManager {
+  - queue: chan Command
+  - executor: CommandExecutor
+  - retryManager: RetryManager
+  --
+  + Enqueue(cmd): error
+  + Dequeue(): Command
+  + Process(): void
+  + StartWorkers(count): void
+}
+
+class ResultProcessor {
+  - repository: CommandRepository
+  - eventPublisher: EventPublisher
+  --
+  + ProcessResult(result): error
+  + HandleSuccess(result): void
+  + HandleFailure(result): void
+}
+
+class RetryManager {
+  - policy: RetryPolicy
+  - maxRetries: int
+  --
+  + ShouldRetry(cmd): bool
+  + CalculateBackoff(attempt): time.Duration
+  + ScheduleRetry(cmd): error
+}
+
+
+interface CommandRepository {
+  + Save(cmd): error
+  + Update(cmd): error
+  + FindById(id): (Command, error)
+  + SaveResult(result): error
+  + FindResultByCommandId(id): (CommandResult, error)
+}
+
+interface RetryPolicy {
+  + CalculateDelay(attempt): time.Duration
+  + ShouldRetry(cmd, result): bool
+}
+
+interface EventPublisher {
+  + PublishCommandExecuted(cmd, result): error
+  + PublishCommandFailed(cmd, err): error
+  + PublishCommandTimeout(cmd): error
+}
+
+interface MQTTClient {
+  + Publish(topic, payload): error
+  + Subscribe(topic, handler): error
+  + IsConnected(): bool
+}
+
+interface DeviceRegistryClient {
+  + GetDevice(id): (Device, error)
+  + GetCapabilities(deviceId): (DeviceCapability, error)
+  + CheckAccess(userId, deviceId): (bool, error)
+}
+
+
+
+class CommandRepositoryImpl {
+  - db: *sql.DB
+  --
+  + Save(cmd): error
+  + Update(cmd): error
+  + FindById(id): (Command, error)
+  + SaveResult(result): error
+}
+
+class ExponentialBackoffPolicy {
+  - baseDelay: time.Duration
+  - maxDelay: time.Duration
+  - multiplier: float64
+  --
+  + CalculateDelay(attempt): time.Duration
+  + ShouldRetry(cmd, result): bool
+}
+
+class KafkaEventPublisher {
+  - producer: *kafka.Producer
+  - topic: string
+  --
+  + PublishCommandExecuted(cmd, result): error
+  + PublishCommandFailed(cmd, err): error
+}
+
+class PahoMQTTClient {
+  - client: mqtt.Client
+  - broker: string
+  --
+  + Publish(topic, payload): error
+  + Subscribe(topic, handler): error
+}
+
+
+Command --> CommandStatus
+Command --> CommandType
+Command ..> CommandResult : creates
+
+CommandHandler --> CommandValidator : uses
+CommandHandler --> CommandRepository : uses
+CommandHandler --> QueueManager : uses
+CommandHandler --> DeviceRegistryClient : uses
+
+CommandValidator --> DeviceRegistryClient : uses
+CommandValidator ..> DeviceCapability : validates against
+
+QueueManager --> CommandExecutor : uses
+QueueManager --> RetryManager : uses
+QueueManager o-- Command : manages
+
+CommandExecutor --> MQTTClient : uses
+CommandExecutor --> ResultProcessor : uses
+
+ResultProcessor --> CommandRepository : uses
+ResultProcessor --> EventPublisher : uses
+ResultProcessor ..> CommandResult : processes
+
+RetryManager --> RetryPolicy : uses
+RetryManager ..> Command : retries
+
+DeviceCapability *-- ParameterSpec : contains
+
+CommandRepositoryImpl ..|> CommandRepository : implements
+ExponentialBackoffPolicy ..|> RetryPolicy : implements
+KafkaEventPublisher ..|> EventPublisher : implements
+PahoMQTTClient ..|> MQTTClient : implements
+
+
+@enduml
