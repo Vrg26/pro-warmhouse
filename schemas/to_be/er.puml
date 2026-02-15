@@ -18,13 +18,13 @@ class Role <<User>> {
 class UserDeviceAccess <<User>> {
     primary_key(id): UUID
     user_id: UUID
-    device_id: UUID
+    device_id: INT
     role_id: UUID
     granted_at: TIMESTAMP
 }
 
 class Device <<Device>> {
-    primary_key(id): UUID
+    primary_key(id): INT
     owner_id: UUID
     type: VARCHAR
     manufacturer: VARCHAR
@@ -37,7 +37,7 @@ class Device <<Device>> {
 
 class DeviceCapability <<Device>> {
     primary_key(id): UUID
-    device_id: UUID
+    device_id: INT
     command_type: VARCHAR
     parameter_spec: JSONB
 }
@@ -52,7 +52,7 @@ class Location <<Device>> {
 
 class Command <<Command>> {
     primary_key(id): UUID
-    device_id: UUID
+    device_id: INT
     user_id: UUID
     type: VARCHAR
     parameters: JSONB
@@ -73,7 +73,7 @@ class CommandResult <<Command>> {
 
 class TelemetryReading <<Telemetry>> {
     primary_key(id): UUID
-    device_id: UUID
+    device_id: INT
     metric_name: VARCHAR
     value: FLOAT
     unit: VARCHAR
@@ -82,11 +82,12 @@ class TelemetryReading <<Telemetry>> {
 
 class TelemetryAggregate <<Telemetry>> {
     primary_key(id): UUID
-    device_id: UUID
+    device_id: INT
     metric_name: VARCHAR
     avg_value: FLOAT
     min_value: FLOAT
     max_value: FLOAT
+    count: INT
     period_start: TIMESTAMP
     period_end: TIMESTAMP
 }
@@ -111,16 +112,16 @@ class Condition <<Scenarios>> {
     primary_key(id): UUID
     scenario_id: UUID
     expression: TEXT
-    device_id: UUID
+    device_id: INT
 }
 
 class Action <<Scenarios>> {
     primary_key(id): UUID
     scenario_id: UUID
     type: VARCHAR
-    target_device_id: UUID
+    target_device_id: INT
     parameters: JSONB
-    order: INT
+    execution_order: INT
 }
 
 User ||--o{ UserDeviceAccess : "has access to"
@@ -139,10 +140,7 @@ Device ||--o{ Action : "controlled by"
 Device }o--|| Location : "located in"
 Device ||--o{ UserDeviceAccess : "accessible by"
 
-Location ||--o{ DeviceLocation : "contains"
-
-
-Command ||--|| CommandResult : "has result"
+Command ||--o| CommandResult : "has result"
 
 
 TelemetryReading ||--o{ TelemetryAggregate : "aggregated into"
