@@ -1,0 +1,248 @@
+openapi: 3.0.3
+info:
+  title: Device Control Service API
+  description: |
+    Микросервис управления устройствами умного дома.
+    Реализует домен "Device Control" из целевой архитектуры системы "Тёплый дом".
+
+    **Стек:** Java, Spring Boot, JPA/Hibernate, PostgreSQL
+
+    **Компоненты C4:** REST API Controller, Command Handler, Command Validator, Command Executor, Result Processor, Repository
+
+    **Жизненный цикл команды:** PENDING → VALIDATING → QUEUED → EXECUTING → SUCCESS / FAILED / TIMEOUT
+  version: 1.0.0
+  contact:
+    name: WarmHouse Team
+
+servers:
+  - url: http://localhost:8083
+    description: Local development
+
+tags:
+  - name: health
+    description: Проверка состояния сервиса
+  - name: commands
+    description: Управление командами устройств
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: device-control
+
+  /api/v1/devices/{deviceId}/commands:
+    post:
+      tags: [commands]
+      summary: Отправить команду устройству
+      description: |
+        Создаёт команду, валидирует параметры, выполняет и возвращает результат.
+
+        Поддерживаемые типы команд:
+        - **SET_TEMPERATURE** — установить целевую температуру (10.0–35.0 °C)
+        - **TOGGLE_POWER** — включить/выключить устройство (state: on/off)
+        - **SET_BRIGHTNESS** — установить яркость (0–100%)
+
+        При успешном выполнении команды значение автоматически обновляется в монолите
+        через PATCH /api/v1/sensors/{id}/value.
+      operationId: createCommand
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID устройства (совпадает с sensor.id в монолите)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommandRequest'
+            examples:
+              set_temperature:
+                summary: Установить температуру
+                value:
+                  type: SET_TEMPERATURE
+                  parameters:
+                    target_temperature: 22.5
+              toggle_power:
+                summary: Включить устройство
+                value:
+                  type: TOGGLE_POWER
+                  parameters:
+                    state: "on"
+              set_brightness:
+                summary: Установить яркость
+                value:
+                  type: SET_BRIGHTNESS
+                  parameters:
+                    brightness_level: 75
+      responses:
+        '201':
+          description: Команда создана и выполнена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+        '400':
+          description: Невалидная команда или параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/commands/{commandId}:
+    get:
+      tags: [commands]
+      summary: Получить детали команды
+      description: Возвращает полную информацию о команде, включая результат выполнения.
+      operationId: getCommand
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Детали команды
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+        '404':
+          description: Команда не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/commands/{commandId}/status:
+    get:
+      tags: [commands]
+      summary: Получить статус команды
+      description: Возвращает только ID и текущий статус команды (облегчённый polling).
+      operationId: getCommandStatus
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Статус команды
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandStatusResponse'
+        '404':
+          description: Команда не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    CommandRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [SET_TEMPERATURE, TOGGLE_POWER, SET_BRIGHTNESS]
+          description: Тип команды
+        parameters:
+          type: object
+          additionalProperties: true
+          description: |
+            Параметры зависят от типа команды:
+            - SET_TEMPERATURE: { target_temperature: float (10.0-35.0) }
+            - TOGGLE_POWER: { state: string ("on"/"off") }
+            - SET_BRIGHTNESS: { brightness_level: float (0-100) }
+
+    CommandResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        deviceId:
+          type: integer
+        type:
+          type: string
+          enum: [SET_TEMPERATURE, TOGGLE_POWER, SET_BRIGHTNESS]
+        parameters:
+          type: string
+          description: JSON-строка с параметрами
+        status:
+          type: string
+          enum: [PENDING, VALIDATING, QUEUED, EXECUTING, SUCCESS, FAILED, TIMEOUT]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        retryCount:
+          type: integer
+        result:
+          $ref: '#/components/schemas/CommandResultDto'
+          nullable: true
+
+    CommandResultDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [SUCCESS, FAILED, TIMEOUT]
+        response:
+          type: string
+          nullable: true
+          description: JSON-строка с ответом устройства
+        errorMessage:
+          type: string
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+        executionTimeMs:
+          type: integer
+          description: Время выполнения в миллисекундах
+
+    CommandStatusResponse:
+      type: object
+      properties:
+        commandId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, VALIDATING, QUEUED, EXECUTING, SUCCESS, FAILED, TIMEOUT]
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string

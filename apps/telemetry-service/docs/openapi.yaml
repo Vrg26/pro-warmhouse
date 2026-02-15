@@ -1,0 +1,249 @@
+openapi: 3.0.3
+info:
+  title: Telemetry Service API
+  description: |
+    Микросервис сбора и хранения телеметрии IoT-устройств.
+    Реализует домен "Telemetry & Monitoring" из целевой архитектуры системы "Тёплый дом".
+
+    **Стек:** Python, FastAPI, asyncpg, PostgreSQL
+
+    **Компоненты C4:** REST API Controller, Data Ingestion, Data Validator, Query Service, Aggregation Engine, Repository
+  version: 1.0.0
+  contact:
+    name: WarmHouse Team
+
+servers:
+  - url: http://localhost:8082
+    description: Local development
+
+tags:
+  - name: health
+    description: Проверка состояния сервиса
+  - name: telemetry
+    description: Сбор и чтение телеметрии
+  - name: aggregation
+    description: Агрегированная статистика
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: telemetry
+
+  /api/v1/telemetry:
+    post:
+      tags: [telemetry]
+      summary: Записать показание телеметрии
+      description: |
+        Принимает показание от датчика, валидирует значение по типу метрики
+        и сохраняет в базу данных.
+
+        Валидация:
+        - temperature: от -50 до 100 °C
+        - humidity: от 0 до 100 %
+        - pressure: от 800 до 1200 hPa
+        - brightness: от 0 до 100 %
+      operationId: ingestTelemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryCreate'
+            example:
+              device_id: 1
+              metric_name: temperature
+              value: 23.5
+              unit: "°C"
+      responses:
+        '201':
+          description: Показание сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryReading'
+        '400':
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/devices/{device_id}/telemetry:
+    get:
+      tags: [telemetry]
+      summary: История телеметрии устройства
+      description: Возвращает показания устройства, отсортированные по времени (новые первые).
+      operationId: getDeviceTelemetry
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID устройства (совпадает с sensor.id в монолите)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+          description: Максимальное количество записей
+      responses:
+        '200':
+          description: Список показаний
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TelemetryReading'
+
+  /api/v1/devices/{device_id}/telemetry/current:
+    get:
+      tags: [telemetry]
+      summary: Последнее показание устройства
+      description: Возвращает самое свежее показание телеметрии для устройства.
+      operationId: getCurrentTelemetry
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Последнее показание
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryReading'
+        '404':
+          description: Нет данных телеметрии для устройства
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/devices/{device_id}/telemetry/aggregate:
+    get:
+      tags: [aggregation]
+      summary: Агрегированная статистика
+      description: |
+        Возвращает среднее, минимальное и максимальное значения по всем показаниям устройства.
+        Можно отфильтровать по имени метрики.
+      operationId: getTelemetryAggregates
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: metric_name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Фильтр по метрике (например: temperature, humidity)"
+      responses:
+        '200':
+          description: Агрегированные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryAggregate'
+        '404':
+          description: Нет данных для агрегации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    TelemetryCreate:
+      type: object
+      required: [device_id, metric_name, value]
+      properties:
+        device_id:
+          type: integer
+          description: ID устройства
+        metric_name:
+          type: string
+          description: "Тип метрики: temperature, humidity, pressure, brightness"
+        value:
+          type: number
+          format: float
+          description: Значение показания
+        unit:
+          type: string
+          nullable: true
+          description: "Единица измерения (°C, %, hPa, lux)"
+
+    TelemetryReading:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: integer
+        metric_name:
+          type: string
+        value:
+          type: number
+          format: float
+        unit:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+
+    TelemetryAggregate:
+      type: object
+      properties:
+        device_id:
+          type: integer
+        metric_name:
+          type: string
+        avg_value:
+          type: number
+          format: float
+        min_value:
+          type: number
+          format: float
+        max_value:
+          type: number
+          format: float
+        count:
+          type: integer
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string

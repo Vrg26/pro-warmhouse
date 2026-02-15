@@ -318,11 +318,38 @@
 
 ### 1. Тип API
 
-Укажите, какой тип API вы будете использовать для взаимодействия микросервисов. Объясните своё решение.
+В микросервисной архитектуре системы "Умный дом" используется комбинированный подход с разными типами API для разных задач. REST API выбран как основной протокол для синхронного взаимодействия между клиентами (Web/Mobile) и микросервисами, а также для межсервисного взаимодействия, благодаря своей простоте, универсальности. Дополнительно используется MQTT для легковесной коммуникации с IoT-устройствами (отправка команд, получение телеметрии), Kafka для асинхронной event-driven коммуникации между микросервисами (события CommandExecuted, TelemetryReceived, MotionDetected).
 
 ### 2. Документация API
 
-Здесь приложите ссылки на документацию API для микросервисов, которые вы спроектировали в первой части проектной работы. Для документирования используйте Swagger/OpenAPI или AsyncAPI.
+Для MVP-микросервисов подготовлена документация в формате OpenAPI 3.0:
+
+- **Telemetry Service** (Python/FastAPI) — [`apps/telemetry-service/docs/openapi.yaml`](apps/telemetry-service/docs/openapi.yaml)
+  - Также доступна интерактивная Swagger UI при запуске сервиса: http://localhost:8082/docs
+- **Device Control Service** (Java/Spring Boot) — [`apps/device-control-service/docs/openapi.yaml`](apps/device-control-service/docs/openapi.yaml)
+
+#### Telemetry Service API (порт 8082)
+
+| Метод | Эндпоинт | Описание |
+|-------|---------|----------|
+| GET | `/health` | Health check |
+| POST | `/api/v1/telemetry` | Записать показание телеметрии |
+| GET | `/api/v1/devices/{id}/telemetry` | История показаний устройства |
+| GET | `/api/v1/devices/{id}/telemetry/current` | Последнее показание |
+| GET | `/api/v1/devices/{id}/telemetry/aggregate` | Агрегаты (avg/min/max) |
+
+#### Device Control Service API (порт 8083)
+
+| Метод | Эндпоинт | Описание |
+|-------|---------|----------|
+| GET | `/health` | Health check |
+| POST | `/api/v1/devices/{id}/commands` | Отправить команду устройству |
+| GET | `/api/v1/commands/{id}` | Детали команды с результатом |
+| GET | `/api/v1/commands/{id}/status` | Статус выполнения команды |
+
+Типы команд: `SET_TEMPERATURE`, `TOGGLE_POWER`, `SET_BRIGHTNESS`
+
+Жизненный цикл команды: `PENDING → VALIDATING → QUEUED → EXECUTING → SUCCESS / FAILED / TIMEOUT`
 
 # Задание 5. Работа с docker и docker-compose
 
