@@ -2,193 +2,422 @@
     "info": {
         "_postman_id": "f8e3a123-4567-89ab-cdef-0123456789ab",
         "name": "Smart Home Sensor API",
-        "description": "A collection for testing the Smart Home Sensor Management API",
+        "description": "A collection for testing the Smart Home Sensor Management API and microservices",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
         {
-            "name": "Health Check",
-            "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                    "raw": "http://localhost:8080/health",
-                    "protocol": "http",
-                    "host": [
-                        "localhost"
-                    ],
-                    "port": "8080",
-                    "path": [
-                        "health"
-                    ]
+            "name": "Monolith",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8080/health",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8080",
+                            "path": ["health"]
+                        },
+                        "description": "Check if the monolith API is running"
+                    },
+                    "response": []
                 },
-                "description": "Check if the API is running"
-            },
-            "response": []
+                {
+                    "name": "Get All Sensors",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/sensors",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8080",
+                            "path": ["api", "v1", "sensors"]
+                        },
+                        "description": "Retrieve all sensors (also pushes telemetry for temperature sensors)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Sensor by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/sensors/1",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8080",
+                            "path": ["api", "v1", "sensors", "1"]
+                        },
+                        "description": "Retrieve a specific sensor by ID"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Sensor",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Living Room Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Living Room\",\n    \"unit\": \"°C\"\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/sensors",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8080",
+                            "path": ["api", "v1", "sensors"]
+                        },
+                        "description": "Create a new sensor"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Sensor",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Living Room Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Living Room\",\n    \"unit\": \"°C\"\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/sensors/1",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8080",
+                            "path": ["api", "v1", "sensors", "1"]
+                        },
+                        "description": "Update an existing sensor"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Sensor",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/sensors/1",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8080",
+                            "path": ["api", "v1", "sensors", "1"]
+                        },
+                        "description": "Delete a sensor"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Sensor Value",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"value\": 22.5,\n    \"status\": \"active\"\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/sensors/1/value",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8080",
+                            "path": ["api", "v1", "sensors", "1", "value"]
+                        },
+                        "description": "Update a sensor's value and status"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Send Command (via Monolith)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"type\": \"SET_TEMPERATURE\",\n    \"parameters\": {\n        \"target_temperature\": 22.5\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/sensors/1/command",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8080",
+                            "path": ["api", "v1", "sensors", "1", "command"]
+                        },
+                        "description": "Send a command to a device via the monolith (proxied to Device Control Service)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Command Status (via Monolith)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8080/api/v1/commands/{{commandId}}",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8080",
+                            "path": ["api", "v1", "commands", "{{commandId}}"]
+                        },
+                        "description": "Get command details via the monolith (proxied to Device Control Service)"
+                    },
+                    "response": []
+                }
+            ]
         },
         {
-            "name": "Get All Sensors",
-            "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                    "raw": "http://localhost:8080/api/v1/sensors",
-                    "protocol": "http",
-                    "host": [
-                        "localhost"
-                    ],
-                    "port": "8080",
-                    "path": [
-                        "api",
-                        "v1",
-                        "sensors"
-                    ]
+            "name": "Telemetry Service",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8082/health",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8082",
+                            "path": ["health"]
+                        },
+                        "description": "Check if the Telemetry Service is running"
+                    },
+                    "response": []
                 },
-                "description": "Retrieve all sensors"
-            },
-            "response": []
+                {
+                    "name": "Post Telemetry Reading",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"device_id\": 1,\n    \"metric_name\": \"temperature\",\n    \"value\": 23.5,\n    \"unit\": \"°C\"\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:8082/api/v1/telemetry",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8082",
+                            "path": ["api", "v1", "telemetry"]
+                        },
+                        "description": "Ingest a new telemetry reading"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Device Telemetry History",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8082/api/v1/devices/1/telemetry",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8082",
+                            "path": ["api", "v1", "devices", "1", "telemetry"]
+                        },
+                        "description": "Get telemetry history for device 1"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Current Telemetry",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8082/api/v1/devices/1/telemetry/current",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8082",
+                            "path": ["api", "v1", "devices", "1", "telemetry", "current"]
+                        },
+                        "description": "Get the latest telemetry reading for device 1"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Telemetry Aggregates",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8082/api/v1/devices/1/telemetry/aggregate?metric_name=temperature",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8082",
+                            "path": ["api", "v1", "devices", "1", "telemetry", "aggregate"],
+                            "query": [
+                                {
+                                    "key": "metric_name",
+                                    "value": "temperature"
+                                }
+                            ]
+                        },
+                        "description": "Get aggregated telemetry statistics (avg, min, max) for device 1"
+                    },
+                    "response": []
+                }
+            ]
         },
         {
-            "name": "Get Sensor by ID",
-            "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                    "raw": "http://localhost:8080/api/v1/sensors/1",
-                    "protocol": "http",
-                    "host": [
-                        "localhost"
-                    ],
-                    "port": "8080",
-                    "path": [
-                        "api",
-                        "v1",
-                        "sensors",
-                        "1"
-                    ]
+            "name": "Device Control Service",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8083/health",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8083",
+                            "path": ["health"]
+                        },
+                        "description": "Check if the Device Control Service is running"
+                    },
+                    "response": []
                 },
-                "description": "Retrieve a specific sensor by ID"
-            },
-            "response": []
-        },
-        {
-            "name": "Create Sensor",
-            "request": {
-                "method": "POST",
-                "header": [
-                    {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                    }
-                ],
-                "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"name\": \"Living Room Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Living Room\",\n    \"unit\": \"°C\"\n}"
+                {
+                    "name": "Send SET_TEMPERATURE Command",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"type\": \"SET_TEMPERATURE\",\n    \"parameters\": {\n        \"target_temperature\": 22.5\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:8083/api/v1/devices/1/commands",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8083",
+                            "path": ["api", "v1", "devices", "1", "commands"]
+                        },
+                        "description": "Send a SET_TEMPERATURE command to device 1"
+                    },
+                    "response": []
                 },
-                "url": {
-                    "raw": "http://localhost:8080/api/v1/sensors",
-                    "protocol": "http",
-                    "host": [
-                        "localhost"
-                    ],
-                    "port": "8080",
-                    "path": [
-                        "api",
-                        "v1",
-                        "sensors"
-                    ]
+                {
+                    "name": "Send TOGGLE_POWER Command",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"type\": \"TOGGLE_POWER\",\n    \"parameters\": {\n        \"state\": \"on\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:8083/api/v1/devices/1/commands",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8083",
+                            "path": ["api", "v1", "devices", "1", "commands"]
+                        },
+                        "description": "Send a TOGGLE_POWER command to device 1"
+                    },
+                    "response": []
                 },
-                "description": "Create a new sensor"
-            },
-            "response": []
-        },
-        {
-            "name": "Update Sensor",
-            "request": {
-                "method": "PUT",
-                "header": [
-                    {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                    }
-                ],
-                "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"name\": \"Updated Living Room Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Living Room\",\n    \"unit\": \"°C\"\n}"
+                {
+                    "name": "Send SET_BRIGHTNESS Command",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"type\": \"SET_BRIGHTNESS\",\n    \"parameters\": {\n        \"brightness_level\": 75\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "http://localhost:8083/api/v1/devices/1/commands",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8083",
+                            "path": ["api", "v1", "devices", "1", "commands"]
+                        },
+                        "description": "Send a SET_BRIGHTNESS command to device 1"
+                    },
+                    "response": []
                 },
-                "url": {
-                    "raw": "http://localhost:8080/api/v1/sensors/1",
-                    "protocol": "http",
-                    "host": [
-                        "localhost"
-                    ],
-                    "port": "8080",
-                    "path": [
-                        "api",
-                        "v1",
-                        "sensors",
-                        "1"
-                    ]
+                {
+                    "name": "Get Command Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8083/api/v1/commands/{{commandId}}",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8083",
+                            "path": ["api", "v1", "commands", "{{commandId}}"]
+                        },
+                        "description": "Get full command details including result"
+                    },
+                    "response": []
                 },
-                "description": "Update an existing sensor"
-            },
-            "response": []
-        },
-        {
-            "name": "Delete Sensor",
-            "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                    "raw": "http://localhost:8080/api/v1/sensors/1",
-                    "protocol": "http",
-                    "host": [
-                        "localhost"
-                    ],
-                    "port": "8080",
-                    "path": [
-                        "api",
-                        "v1",
-                        "sensors",
-                        "1"
-                    ]
-                },
-                "description": "Delete a sensor"
-            },
-            "response": []
-        },
-        {
-            "name": "Update Sensor Value",
-            "request": {
-                "method": "PATCH",
-                "header": [
-                    {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                    }
-                ],
-                "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"value\": 22.5,\n    \"status\": \"active\"\n}"
-                },
-                "url": {
-                    "raw": "http://localhost:8080/api/v1/sensors/1/value",
-                    "protocol": "http",
-                    "host": [
-                        "localhost"
-                    ],
-                    "port": "8080",
-                    "path": [
-                        "api",
-                        "v1",
-                        "sensors",
-                        "1",
-                        "value"
-                    ]
-                },
-                "description": "Update a sensor's value and status"
-            },
-            "response": []
+                {
+                    "name": "Get Command Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "http://localhost:8083/api/v1/commands/{{commandId}}/status",
+                            "protocol": "http",
+                            "host": ["localhost"],
+                            "port": "8083",
+                            "path": ["api", "v1", "commands", "{{commandId}}", "status"]
+                        },
+                        "description": "Get command execution status only"
+                    },
+                    "response": []
+                }
+            ]
         }
     ],
     "event": [
@@ -196,18 +425,14 @@
             "listen": "prerequest",
             "script": {
                 "type": "text/javascript",
-                "exec": [
-                    ""
-                ]
+                "exec": [""]
             }
         },
         {
             "listen": "test",
             "script": {
                 "type": "text/javascript",
-                "exec": [
-                    ""
-                ]
+                "exec": [""]
             }
         }
     ],
@@ -215,6 +440,11 @@
         {
             "key": "baseUrl",
             "value": "http://localhost:8080",
+            "type": "string"
+        },
+        {
+            "key": "commandId",
+            "value": "replace-with-actual-command-id",
             "type": "string"
         }
     ]

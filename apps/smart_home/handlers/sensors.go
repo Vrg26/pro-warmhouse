@@ -16,15 +16,19 @@ import (
 
 // SensorHandler handles sensor-related requests
 type SensorHandler struct {
-	DB                 *db.DB
-	TemperatureService *services.TemperatureService
+	DB                   *db.DB
+	TemperatureService   *services.TemperatureService
+	TelemetryClient      *services.TelemetryClient
+	DeviceControlClient  *services.DeviceControlClient
 }
 
 // NewSensorHandler creates a new SensorHandler
-func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService) *SensorHandler {
+func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService, telemetryClient *services.TelemetryClient, deviceControlClient *services.DeviceControlClient) *SensorHandler {
 	return &SensorHandler{
-		DB:                 db,
-		TemperatureService: temperatureService,
+		DB:                   db,
+		TemperatureService:   temperatureService,
+		TelemetryClient:      telemetryClient,
+		DeviceControlClient:  deviceControlClient,
 	}
 }
 
@@ -39,7 +43,11 @@ func (h *SensorHandler) RegisterRoutes(router *gin.RouterGroup) {
 		sensors.DELETE("/:id", h.DeleteSensor)
 		sensors.PATCH("/:id/value", h.UpdateSensorValue)
 		sensors.GET("/temperature/:location", h.GetTemperatureByLocation)
+		sensors.POST("/:id/command", h.SendCommand)
 	}
+
+	// Command routes (outside /sensors group)
+	router.GET("/commands/:id", h.GetCommandStatus)
 }
 
 // GetSensors handles GET /api/v1/sensors
@@ -60,6 +68,17 @@ func (h *SensorHandler) GetSensors(c *gin.Context) {
 				sensors[i].Status = tempData.Status
 				sensors[i].LastUpdated = tempData.Timestamp
 				log.Printf("Updated temperature data for sensor %d from external API", sensor.ID)
+
+				// Push telemetry reading to telemetry service
+				if h.TelemetryClient != nil {
+					go func(sensorID int, value float64, unit string) {
+						if err := h.TelemetryClient.PostTelemetry(sensorID, "temperature", value, unit); err != nil {
+							log.Printf("Failed to push telemetry for sensor %d: %v", sensorID, err)
+						} else {
+							log.Printf("Pushed telemetry for sensor %d to telemetry service", sensorID)
+						}
+					}(sensor.ID, tempData.Value, tempData.Unit)
+				}
 			} else {
 				log.Printf("Failed to fetch temperature data for sensor %d: %v", sensor.ID, err)
 			}
@@ -210,4 +229,62 @@ func (h *SensorHandler) UpdateSensorValue(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Sensor value updated successfully"})
+}
+
+// SendCommand handles POST /api/v1/sensors/:id/command
+func (h *SensorHandler) SendCommand(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sensor ID"})
+		return
+	}
+
+	if h.DeviceControlClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Device control service is not available"})
+		return
+	}
+
+	var request struct {
+		Type       string                 `json:"type" binding:"required"`
+		Parameters map[string]interface{} `json:"parameters"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result, err := h.DeviceControlClient.SendCommand(id, request.Type, request.Parameters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to send command: %v", err),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, result)
+}
+
+// GetCommandStatus handles GET /api/v1/commands/:id
+func (h *SensorHandler) GetCommandStatus(c *gin.Context) {
+	commandID := c.Param("id")
+	if commandID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Command ID is required"})
+		return
+	}
+
+	if h.DeviceControlClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Device control service is not available"})
+		return
+	}
+
+	result, err := h.DeviceControlClient.GetCommandStatus(commandID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to get command status: %v", err),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
