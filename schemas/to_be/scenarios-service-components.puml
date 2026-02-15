@@ -2,8 +2,8 @@
 !includeurl ../C4-lib/c4_Component.puml
 
 Container_Ext(apiGateway, "API Gateway")
-Container_Ext(deviceControl, "Device Control Service", "Go", "")
-Container_Ext(telemetryService, "Telemetry Service", "Go", "")
+Container_Ext(deviceControl, "Device Control Service", "Java/Spring Boot", "")
+Container_Ext(telemetryService, "Telemetry Service", "Python/FastAPI", "")
 Container_Ext(messageBus, "Message Bus", "Kafka", "")
 ContainerDb_Ext(automationDb, "Automation DB", "PostgreSQL", "")
 

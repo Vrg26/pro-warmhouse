@@ -19,10 +19,10 @@ System_Boundary(coreServices, "Core Microservices") {
     Container(deviceRegistry, "Device Registry Service", "Go", "Каталог и регистрация устройств")
     ContainerDb(deviceDb, "Device DB", "PostgreSQL", "")
 
-    Container(deviceControl, "Device Control Service", "Go", "Отправка команд на устройства")
+    Container(deviceControl, "Device Control Service", "Java/Spring Boot", "Отправка команд на устройства")
     ContainerDb(controlDb, "Control DB", "PostgreSQL", "")
 
-    Container(telemetryService, "Telemetry Service", "Go", "Сбор и хранение телеметрии")
+    Container(telemetryService, "Telemetry Service", "Python/FastAPI", "Сбор и хранение телеметрии")
     ContainerDb(telemetryDb, "Telemetry DB", "TimescaleDB", "Time-series данные")
 
     Container(automationService, "Scenaries Service", "Go", "Сценарии и автоматизация")
@@ -37,7 +37,7 @@ System_Boundary(coreServices, "Core Microservices") {
 
 System_Boundary(infrastructure, "Infrastructure Services") {
     Container(protocolGateway, "Protocol Gateway", "MQTT Broker", "Коммуникация с IoT устройствами")
-    Container(messageBus, "Message Bus", "RabbitMQ", "Event-driven коммуникация")
+    Container(messageBus, "Message Bus", "Kafka", "Event-driven коммуникация")
     Container(cache, "Cache", "Redis", "Кэширование")
 }
 
@@ -74,11 +74,11 @@ Rel(telemetryService, protocolGateway, "Получение телеметрии"
 Rel(userService, cache, "Кэш токенов", "Redis")
 Rel(deviceRegistry, cache, "Кэш статусов", "Redis")
 
-Rel(deviceControl, messageBus, "Публикует события", "AMQP")
-Rel(telemetryService, messageBus, "Публикует события", "AMQP")
-Rel(videoService, messageBus, "Публикует события", "AMQP")
-Rel(automationService, messageBus, "Подписан на события", "AMQP")
-Rel(notificationService, messageBus, "Подписан на события", "AMQP")
+Rel(deviceControl, messageBus, "Публикует события", "Kafka")
+Rel(telemetryService, messageBus, "Публикует события", "Kafka")
+Rel(videoService, messageBus, "Публикует события", "Kafka")
+Rel(automationService, messageBus, "Подписан на события", "Kafka")
+Rel(notificationService, messageBus, "Подписан на события", "Kafka")
 
 Rel(protocolGateway, iotDevices, "Команды и запросы", "MQTT/Zigbee/Z-Wave")
 Rel_Back(iotDevices, protocolGateway, "Телеметрия и статусы", "MQTT")

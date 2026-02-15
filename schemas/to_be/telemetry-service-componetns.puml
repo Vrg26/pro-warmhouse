@@ -12,25 +12,25 @@ ContainerDb_Ext(telemetryDb, "Telemetry DB", "TimescaleDB", "")
 
 Container_Boundary(telemetry, "Telemetry Service") {
     
-    Component(restApi, "REST API Controller", "Go/Chi", "Endpoints:\n• GET /devices/{id}/telemetry\n• GET /devices/{id}/telemetry/current\n• GET /devices/{id}/analytics")
+    Component(restApi, "REST API Controller", "Python/FastAPI", "Endpoints:\n• GET /devices/{id}/telemetry\n• GET /devices/{id}/telemetry/current\n• GET /devices/{id}/telemetry/aggregate")
     
-    Component(mqttSubscriber, "MQTT Subscriber", "Go", "Подписка на топики:\n• devices/+/telemetry\n• Получение данных от датчиков\n• High-throughput обработка")
+    Component(mqttSubscriber, "MQTT Subscriber", "Python", "Подписка на топики:\n• devices/+/telemetry\n• Получение данных от датчиков\n• High-throughput обработка")
     
-    Component(dataIngestion, "Data Ingestion", "Go", "Приём телеметрии:\n• Валидация формата\n• Нормализация данных\n• Buffering")
+    Component(dataIngestion, "Data Ingestion", "Python", "Приём телеметрии:\n• Валидация формата\n• Нормализация данных\n• Buffering")
     
-    Component(dataValidator, "Data Validator", "Go", "Валидация:\n• Проверка диапазонов\n• Обнаружение аномалий\n• Отбрасывание некорректных данных")
+    Component(dataValidator, "Data Validator", "Python", "Валидация:\n• Проверка диапазонов\n• Обнаружение аномалий\n• Отбрасывание некорректных данных")
     
-    Component(batchWriter, "Batch Writer", "Go", "Пакетная запись:\n• Накопление данных\n• Bulk insert\n• Оптимизация производительности")
+    Component(batchWriter, "Batch Writer", "Python", "Пакетная запись:\n• Накопление данных\n• Bulk insert\n• Оптимизация производительности")
     
-    Component(aggregationEngine, "Aggregation Engine", "Go", "Агрегация:\n• Почасовые средние\n• Дневные минимум/максимум\n• Тренды")
+    Component(aggregationEngine, "Aggregation Engine", "Python", "Агрегация:\n• Почасовые средние\n• Дневные минимум/максимум\n• Тренды")
     
-    Component(queryService, "Query Service", "Go", "Выборка данных:\n• Time-range запросы\n• Фильтрация по метрикам\n• Downsampling")
+    Component(queryService, "Query Service", "Python", "Выборка данных:\n• Time-range запросы\n• Фильтрация по метрикам\n• Downsampling")
     
-    Component(eventPublisher, "Event Publisher", "Go", "Публикация событий:\n• TelemetryReceived\n• ThresholdExceeded\n• AnomalyDetected")
+    Component(eventPublisher, "Event Publisher", "Python", "Публикация событий:\n• TelemetryReceived\n• ThresholdExceeded\n• AnomalyDetected")
     
-    Component(cacheManager, "Cache Manager", "Go", "Кэширование:\n• Last readings\n• Текущие значения\n• Часто запрашиваемые агрегаты")
+    Component(cacheManager, "Cache Manager", "Python", "Кэширование:\n• Last readings\n• Текущие значения\n• Часто запрашиваемые агрегаты")
     
-    Component(repository, "Repository", "Go", "Data Access Layer:\n• Time-series queries\n• Hypertable operations")
+    Component(repository, "Repository", "Python", "Data Access Layer:\n• Time-series queries\n• Hypertable operations")
 }
 
 Rel(protocolGateway, mqttSubscriber, "Телеметрия от устройств", "MQTT")
@@ -53,6 +53,6 @@ Rel(dataValidator, eventPublisher, "ThresholdExceeded/Anomaly")
 
 Rel(repository, telemetryDb, "SQL запросы")
 
-Rel(eventPublisher, messageBus, "Публикует события", "AMQP")
+Rel(eventPublisher, messageBus, "Публикует события", "Kafka")
 
 @enduml

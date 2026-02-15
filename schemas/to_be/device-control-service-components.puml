@@ -11,23 +11,23 @@ ContainerDb_Ext(controlDb, "Control DB", "PostgreSQL", "")
 
 Container_Boundary(deviceControl, "Device Control Service") {
     
-    Component(restApi, "REST API Controller", "Go/Gin", "Endpoints:\n• POST /devices/{id}/commands\n• GET /commands/{id}\n• GET /commands/{id}/status")
+    Component(restApi, "REST API Controller", "Java/Spring Boot", "Endpoints:\n• POST /devices/{id}/commands\n• GET /commands/{id}\n• GET /commands/{id}/status")
     
-    Component(commandHandler, "Command Handler", "Go", "Валидация команд:\n• Проверка параметров\n• Проверка прав доступа\n• Создание команды")
+    Component(commandHandler, "Command Handler", "Java", "Валидация команд:\n• Проверка параметров\n• Проверка прав доступа\n• Создание команды")
     
-    Component(commandValidator, "Command Validator", "Go", "Проверяет:\n• Поддерживает ли устройство команду\n• Корректность параметров\n• Валидные значения")
+    Component(commandValidator, "Command Validator", "Java", "Проверяет:\n• Поддерживает ли устройство команду\n• Корректность параметров\n• Валидные значения")
     
-    Component(queueManager, "Queue Manager", "Go", "Управление очередью:\n• Добавление в очередь\n• Приоритизация\n• Обработка в порядке FIFO")
+    Component(queueManager, "Queue Manager", "Java", "Управление очередью:\n• Добавление в очередь\n• Приоритизация\n• Обработка в порядке FIFO")
     
-    Component(commandExecutor, "Command Executor", "Go", "Выполнение команд:\n• Отправка через MQTT\n• Мониторинг выполнения\n• Timeout handling")
+    Component(commandExecutor, "Command Executor", "Java", "Выполнение команд:\n• Отправка через MQTT\n• Мониторинг выполнения\n• Timeout handling")
     
-    Component(resultProcessor, "Result Processor", "Go", "Обработка результатов:\n• Парсинг ответов от устройств\n• Сохранение результатов\n• Обработка ошибок")
+    Component(resultProcessor, "Result Processor", "Java", "Обработка результатов:\n• Парсинг ответов от устройств\n• Сохранение результатов\n• Обработка ошибок")
     
-    Component(retryManager, "Retry Manager", "Go", "Логика повторов:\n• Exponential backoff\n• Max retry attempts\n• Dead letter queue")
+    Component(retryManager, "Retry Manager", "Java", "Логика повторов:\n• Exponential backoff\n• Max retry attempts\n• Dead letter queue")
     
-    Component(eventPublisher, "Event Publisher", "Go", "Публикация событий:\n• CommandExecuted\n• CommandFailed\n• CommandTimeout")
+    Component(eventPublisher, "Event Publisher", "Java", "Публикация событий:\n• CommandExecuted\n• CommandFailed\n• CommandTimeout")
     
-    Component(repository, "Repository", "Go", "Data Access Layer:\n• Сохранение команд\n• Сохранение результатов\n• История команд")
+    Component(repository, "Repository", "Java", "Data Access Layer:\n• Сохранение команд\n• Сохранение результатов\n• История команд")
 }
 
 
@@ -53,7 +53,7 @@ Rel(resultProcessor, retryManager, "При ошибке/timeout")
 Rel(retryManager, queueManager, "Повторная попытка")
 
 
-Rel(eventPublisher, messageBus, "Публикует события", "AMQP")
+Rel(eventPublisher, messageBus, "Публикует события", "Kafka")
 
 
 Rel(repository, controlDb, "SQL запросы")
