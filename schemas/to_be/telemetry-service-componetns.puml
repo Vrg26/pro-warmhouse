@@ -12,7 +12,7 @@ ContainerDb_Ext(telemetryDb, "Telemetry DB", "TimescaleDB", "")
 
 Container_Boundary(telemetry, "Telemetry Service") {
     
-    Component(restApi, "REST API Controller", "Python/FastAPI", "Endpoints:\n• GET /devices/{id}/telemetry\n• GET /devices/{id}/telemetry/current\n• GET /devices/{id}/telemetry/aggregate")
+    Component(restApi, "REST API Controller", "Python/FastAPI", "Endpoints:\n• GET /health\n• POST /api/v1/telemetry\n• GET /api/v1/devices/{device_id}/telemetry\n• GET /api/v1/devices/{device_id}/telemetry/current\n• GET /api/v1/devices/{device_id}/telemetry/aggregate")
     
     Component(mqttSubscriber, "MQTT Subscriber", "Python", "Подписка на топики:\n• devices/+/telemetry\n• Получение данных от датчиков\n• High-throughput обработка")
     

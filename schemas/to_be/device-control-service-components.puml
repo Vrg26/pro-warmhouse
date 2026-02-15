@@ -11,7 +11,7 @@ ContainerDb_Ext(controlDb, "Control DB", "PostgreSQL", "")
 
 Container_Boundary(deviceControl, "Device Control Service") {
     
-    Component(restApi, "REST API Controller", "Java/Spring Boot", "Endpoints:\n• POST /devices/{id}/commands\n• GET /commands/{id}\n• GET /commands/{id}/status")
+    Component(restApi, "REST API Controller", "Java/Spring Boot", "Endpoints:\n• GET /health\n• POST /api/v1/devices/{deviceId}/commands\n• GET /api/v1/commands/{commandId}\n• GET /api/v1/commands/{commandId}/status")
     
     Component(commandHandler, "Command Handler", "Java", "Валидация команд:\n• Проверка параметров\n• Проверка прав доступа\n• Создание команды")
     
