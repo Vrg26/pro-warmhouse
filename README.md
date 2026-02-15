@@ -73,7 +73,7 @@
 - Не создает автоматические сценарии (Это Scenarios)
 
 **Основные сущности:**
-- Comand (ID, deviceId, type, parameters, status, timestamp)
+- Command (ID, deviceId, type, parameters, status, timestamp)
 - CommandQueue
 - CommandResult
 
@@ -334,18 +334,18 @@
 |-------|---------|----------|
 | GET | `/health` | Health check |
 | POST | `/api/v1/telemetry` | Записать показание телеметрии |
-| GET | `/api/v1/devices/{id}/telemetry` | История показаний устройства |
-| GET | `/api/v1/devices/{id}/telemetry/current` | Последнее показание |
-| GET | `/api/v1/devices/{id}/telemetry/aggregate` | Агрегаты (avg/min/max) |
+| GET | `/api/v1/devices/{device_id}/telemetry` | История показаний устройства |
+| GET | `/api/v1/devices/{device_id}/telemetry/current` | Последнее показание |
+| GET | `/api/v1/devices/{device_id}/telemetry/aggregate` | Агрегаты (avg/min/max) |
 
 #### Device Control Service API (порт 8083)
 
 | Метод | Эндпоинт | Описание |
 |-------|---------|----------|
 | GET | `/health` | Health check |
-| POST | `/api/v1/devices/{id}/commands` | Отправить команду устройству |
-| GET | `/api/v1/commands/{id}` | Детали команды с результатом |
-| GET | `/api/v1/commands/{id}/status` | Статус выполнения команды |
+| POST | `/api/v1/devices/{deviceId}/commands` | Отправить команду устройству |
+| GET | `/api/v1/commands/{commandId}` | Детали команды с результатом |
+| GET | `/api/v1/commands/{commandId}/status` | Статус выполнения команды |
 
 Типы команд: `SET_TEMPERATURE`, `TOGGLE_POWER`, `SET_BRIGHTNESS`
 
